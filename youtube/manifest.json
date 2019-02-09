@@ -1,19 +1,21 @@
 {
   "manifest_version": 2,
   "version": "0.1.0",
-  "name": "Audio Equalizer and Amplifier",
-  "description": "Globally controls audio equalization and volume level of media elements",
+  "name": "YouTube Audio Equalizer and Amplifier",
+  "description": "Control audio equalization and volume level of YouTube and YouTube Music",
   "permissions": [
     "storage",
     "webNavigation",
-    "<all_urls>"
+    "*://*.youtube.com/*"
   ],
   "background": {
     "persistent": false,
     "scripts": [
+      "utils.js",
       "background.js"
     ]
   },
+  "homepage_url": "https://add0n.com/audio-equalizer.html?from=youtube",
   "icons": {
     "16": "data/icons/16.png",
     "32": "data/icons/32.png",

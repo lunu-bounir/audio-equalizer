@@ -1,4 +1,4 @@
-/* globals range, Notify */
+/* globals range, Notify, utils */
 'use strict';
 
 var elements = {
@@ -166,11 +166,18 @@ elements.profiles.addEventListener('change', () => {
 elements.enabled.addEventListener('change', async () => {
   await save.enabled();
   if (elements.enabled.checked) {
-    chrome.tabs.executeScript({
-      code: `typeof prefs`
-    }, arr => {
-      if (!arr || arr[0] === 'undefined') {
-        notify.display('Please reload tabs with active audio elements', 'warning', 2000);
+    chrome.tabs.query({
+      active: true,
+      currentWindow: true
+    }, tabs => {
+      if (tabs && tabs[0] && utils.filter(tabs[0])) {
+        chrome.tabs.executeScript({
+          code: `typeof prefs`
+        }, arr => {
+          if (!arr || arr[0] === 'undefined') {
+            notify.display(utils.msg.reload, 'warning', 2000);
+          }
+        });
       }
     });
   }
