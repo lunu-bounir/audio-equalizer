@@ -1,99 +1,63 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <link rel="stylesheet" href="libs/range/range.css">
   <link rel="stylesheet" href="index.css">
   <meta charset="utf-8">
 </head>
 <body>
   <header>
-    <label><input type="checkbox" id="enabled"> Enable</label>
-    <label><input type="checkbox" id="persist" title="If checked, enabling state is persistent after restart"> Persist</label>
-    <select id="presets"></select>
+    <label><input type="checkbox" id="enabled"> Enable Equalizing</label>
+    <label><input type="checkbox" id="persist" title="If checked, enabling state is persistent after restart"> Keep Changes</label>
+    <label><input type="checkbox" id="mono" title="If checked, sterio audio is played as mono"> Use Mono</label>
+    <input type="button" value="Reset Volume" id="reset" title="Reset Preamp and Pan">
+    <div id="pan-container">
+      (L)<div class="range" id="pan" type="horizontal" style="--width: 64px"></div>(R)
+    </div>
   </header>
   <div id="body">
-    <table>
-      <colgroup>
-        <col width="80px">
-        <col>
-      </colgroup>
-      <tbody>
-        <tr>
-          <td>
-            <div style="display: flex;" id="volume">
-              <div class="range"></div>
-              <div class="db">
-                <span>+20 dB</span>
-                <span>0 dB</span>
-                <span>-20 dB</span>
-              </div>
-            </div>
-          </td>
-          <td>
-            <table>
-              <colgroup>
-                <col width="35px">
-                <col width="35px">
-                <col width="35px">
-                <col width="35px">
-                <col width="35px">
-                <col width="35px">
-                <col width="35px">
-                <col width="35px">
-                <col width="35px">
-                <col width="35px">
-              </colgroup>
-              <tr id="levels">
-                <td><div class="range"></div></td>
-                <td><div class="range"></div></td>
-                <td><div class="range"></div></td>
-                <td><div class="range"></div></td>
-                <td><div class="range"></div></td>
-                <td><div class="range"></div></td>
-                <td><div class="range"></div></td>
-                <td><div class="range"></div></td>
-                <td><div class="range"></div></td>
-                <td><div class="range"></div></td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-    <table>
-      <colgroup>
-        <col width="80px">
-        <col width="35px">
-        <col width="35px">
-        <col width="35px">
-        <col width="35px">
-        <col width="35px">
-        <col width="35px">
-        <col width="35px">
-        <col width="35px">
-        <col width="35px">
-        <col width="35px">
-      </colgroup>
-      <tr style="line-height: 30px;">
-        <td>Preamp</td>
-        <td>60</td>
-        <td>170</td>
-        <td>310</td>
-        <td>600</td>
-        <td>1K</td>
-        <td>3K</td>
-        <td>6K</td>
-        <td>12K</td>
-        <td>14K</td>
-        <td>16K</td>
-      </tr>
-    </table>
+    <div id="controls">
+      <div class="range" id="volume"></div>
+      <div data-id="dbs">
+        <span>+20 dB</span>
+        <span>0 dB</span>
+        <span>-20 dB</span>
+      </div>
+      <div style="display: contents" id="levels">
+        <div class="range"></div>
+        <div class="range"></div>
+        <div class="range"></div>
+        <div class="range"></div>
+        <div class="range"></div>
+        <div class="range"></div>
+        <div class="range"></div>
+        <div class="range"></div>
+        <div class="range"></div>
+        <div class="range"></div>
+      </div>
+      <span data-id="dbs-label">Preamp</span>
+      <span>60</span>
+      <span>170</span>
+      <span>310</span>
+      <span>600</span>
+      <span>1K</span>
+      <span>3K</span>
+      <span>6K</span>
+      <span>12K</span>
+      <span>14K</span>
+      <span>16K</span>
+    </div>
   </div>
   <footer>
-    Profile
-    <select id="profiles"></select>
-    <input type="button" value="Add as a new Profile" id="add">
-    <input type="button" value="Delete this Profile" id="remove" disabled="true">
+    <label>
+      Presets
+      <select id="presets"></select>
+    </label>
+    <label>
+      Profile
+      <select id="profiles"></select>
+    </label>
+    <input type="button" value="Store as Profile" id="add">
+    <input type="button" value="Delete Profile" id="remove" disabled="true">
   </footer>
   <script src="libs/range/range.js"></script>
   <script src="libs/notify/notify.js"></script>

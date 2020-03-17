@@ -1,7 +1,9 @@
 /* globals range, Notify, utils */
 'use strict';
 
-var elements = {
+const elements = {
+  mono: document.getElementById('mono'),
+  pan: document.getElementById('pan'),
   volume: document.getElementById('volume'),
   levels: document.getElementById('levels'),
   presets: document.getElementById('presets'),
@@ -12,11 +14,11 @@ var elements = {
   persist: document.getElementById('persist')
 };
 
-var notify = new Notify();
+const notify = new Notify();
 
-var [volume, ...ranges] = range.prepare();
+const [pan, volume, ...ranges] = range.prepare();
 
-var presets = {
+const presets = {
   'Classical': [0.375, 0.375, 0.375, 0.375, 0.375, 0.375, -4.5, -4.5, -4.5, -6],
   'Club': [0.375, 0.375, 2.25, 3.75, 3.75, 3.75, 2.25, 0.375, 0.375, 0.375],
   'Custom': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -37,15 +39,23 @@ var presets = {
   'Techno': [4.875, 3.75, 0.375, -3.375, -3, 0.375, 4.875, 6, 6, 5.625]
 };
 
-var prefs = {
+const prefs = {
   enabled: false,
   persist: false,
   profiles: ['Default'],
-  profile: 'Default'
+  profile: 'Default',
+  pan: 0,
+  mono: false
 };
 
-var save = {
+const save = {
   prefs: prefs => new Promise(resolve => chrome.storage.local.set(prefs, resolve)),
+  mono: () => save.prefs({
+    mono: elements.mono.checked
+  }),
+  pan: () => save.prefs({
+    pan: 1 - (100 - pan.value) / 50
+  }),
   volume: () => save.prefs({
     volume: (100 - volume.value) / 50,
     ['volume.' + elements.profiles.value]: (100 - volume.value) / 50
@@ -71,10 +81,12 @@ var save = {
   })
 };
 
-var update = {
+const update = {
   levels: () => presets[elements.presets.value]
     .map(v => (-v + 20) / 40 * 100)
     .forEach((value, i) => ranges[i].value = value),
+  mono: value => elements.mono.checked = value,
+  pan: level => pan.value = (level + 1) * 50,
   volume: level => volume.value = (2 - level) * 50,
   ui: (callback = () => {}) => chrome.storage.local.get({
     ['volume.' + elements.profiles.value]: 1,
@@ -106,6 +118,10 @@ elements.presets.addEventListener('change', async () => {
 
 // volume
 elements.volume.addEventListener('change', save.volume);
+// pan
+elements.pan.addEventListener('change', save.pan);
+// mono
+elements.mono.addEventListener('change', save.mono);
 
 // levels
 {
@@ -184,6 +200,14 @@ elements.enabled.addEventListener('change', async () => {
 });
 elements.persist.addEventListener('change', save.persist);
 
+// reset
+document.getElementById('reset').addEventListener('click', () => {
+  pan.value = 50;
+  save.pan();
+  volume.value = 50;
+  save.volume();
+});
+
 // init
 chrome.storage.local.get(prefs, ps => {
   Object.assign(prefs, ps);
@@ -201,4 +225,6 @@ chrome.storage.local.get(prefs, ps => {
   elements.remove.disabled = elements.profiles.value === 'Default';
   //
   update.ui();
+  update.pan(prefs.pan);
+  update.mono(prefs.mono);
 });
