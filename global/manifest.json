@@ -1,20 +1,28 @@
 {
   "manifest_version": 2,
-  "version": "0.1.1",
+  "version": "0.1.2",
   "name": "Audio Equalizer and Amplifier",
-  "description": "Globally control audio equalization and volume level of media elements",
+  "description": "__MSG_description__",
+  "default_locale": "en",
   "permissions": [
     "storage",
-    "webNavigation",
-    "<all_urls>"
+    "contextMenus"
   ],
   "background": {
     "persistent": false,
     "scripts": [
-      "utils.js",
       "background.js"
     ]
   },
+  "content_scripts": [{
+    "match_about_blank": true,
+    "matches": ["<all_urls>"],
+    "js": [
+      "data/inject.js"
+    ],
+    "run_at": "document_start",
+    "all_frames": true
+  }],
   "homepage_url": "https://add0n.com/audio-equalizer.html?from=global",
   "icons": {
     "16": "data/icons/16.png",

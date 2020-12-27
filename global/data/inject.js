@@ -1,164 +1,186 @@
 'use strict';
 
-const prefs = {
+const bands = [60, 170, 310, 600, 1000, 3000, 6000, 12000, 14000, 16000];
+
+const script = document.createElement('script');
+script.textContent = `{
+  const script = document.currentScript;
+
+  const bands = [${bands}];
+  const map = new Map();
+
+  const {connect} = AudioNode.prototype;
+  const attach = source => {
+    const {context} = source;
+    const filters = {
+      preamp: context.createGain(),
+      balance: context.createStereoPanner()
+    };
+    filters.preamp.gain.value = isNaN(script.dataset.preamp) ? 1 : Number(script.dataset.preamp);
+    source.connect(filters.preamp);
+    filters.balance.pan.value = isNaN(script.dataset.pan) ? 1 : Number(script.dataset.pan);
+    filters.preamp.connect(filters.balance);
+    bands.forEach((band, i) => {
+      const filter = context.createBiquadFilter();
+      filter.frequency.value = band;
+      filter.gain.value = isNaN(script.dataset[band]) ? 1 : Number(script.dataset[band]);
+      filter.type = {
+        '0': 'lowshelf', // The first filter, includes all lower frequencies
+        [bands.length - 1]: 'highshelf'
+      }[i] || 'peaking';
+      filters[band] = filter;
+      if (i === 0) {
+        filters.balance.connect(filter);
+      }
+      else {
+        filters[bands[i - 1]].connect(filter);
+      }
+    });
+    if (script.dataset.mono === 'true') {
+      context.destination.channelCount = 1;
+    }
+    map.set(source, filters);
+
+    if (script.dataset.enabled === 'false') {
+      return connect.call(source, context.destination);
+    }
+    else {
+      script.dispatchEvent(new Event('connected'));
+      return connect.call(filters['16000'], context.destination);
+    }
+
+  };
+  const source = target => new Promise((resolve, reject) => {
+    const context = new window.AudioContext();
+    setTimeout(() => {
+      try {
+        const source = context.createMediaElementSource(target);
+        resolve(source);
+      }
+      catch(e) {
+        reject(e);
+      }
+    });
+  });
+
+  const detach = () => map.forEach((filters, source) => {
+    source.disconnect();
+    connect.call(source, source.context.destination);
+    script.dispatchEvent(new Event('disconnected'));
+  });
+  const reattach = () => {
+    map.forEach((filters, source) => {
+      source.disconnect();
+      source.connect(filters.preamp);
+      connect.call(filters['16000'], source.context.destination);
+      script.dispatchEvent(new Event('connected'));
+    });
+    if (map.size) {
+      script.dispatchEvent(new Event('connected'));
+    }
+  };
+
+  AudioNode.prototype.connect = function(node) {
+    if (node instanceof AudioDestinationNode) {
+      return attach(this);
+    }
+    else {
+      return connect.apply(this, arguments);
+    }
+  }
+
+  const convert = target => {
+    if (target.src && target.crossOrigin !== 'anonymous' && target.src.startsWith(origin) === false) {
+      target.crossOrigin = 'anonymous';
+      console.log('cannot equalize; skipped due to cors');
+      script.dispatchEvent(new Event('cannot-attach'));
+    }
+    else {
+      source(target).then(attach).catch(e => {});
+      script.dispatchEvent(new Event('can-attach'));
+    }
+  }
+
+  window.addEventListener('playing', e => convert(e.target), true);
+
+  const {play} = Audio.prototype;
+  Audio.prototype.play = function() {
+    if (this.isConnected === false) {
+      convert(this);
+    }
+    return play.apply(this, arguments);
+  };
+
+  script.addEventListener('levels-changed', () => map.forEach(filters => {
+    bands.forEach((band, i) => {
+      filters[band].gain.value = Number(script.dataset[band]);
+    });
+  }));
+  script.addEventListener('pan-changed', () => map.forEach(filters => {
+    filters.balance.pan.value = Number(script.dataset.pan);
+  }));
+  script.addEventListener('preamp-changed', () => map.forEach(filters => {
+    filters.preamp.gain.value = Number(script.dataset.preamp);
+  }));
+  script.addEventListener('mono-changed', () => map.forEach(filters => {
+    const {destination} = filters.preamp.context;
+    destination.channelCount = script.dataset.mono === 'true' ? 1 : destination.maxChannelCount;
+  }));
+  script.addEventListener('enabled-changed', () => {
+    if (script.dataset.enabled === 'false') {
+      detach();
+    }
+    else {
+      reattach();
+    }
+  });
+}`;
+
+document.documentElement.appendChild(script);
+script.addEventListener('connected', () => chrome.runtime.sendMessage({method: 'connected'}));
+script.addEventListener('disconnected', () => chrome.runtime.sendMessage({method: 'disconnected'}));
+script.addEventListener('can-attach', () => script.dataset.enabled === 'true' && chrome.runtime.sendMessage({
+  method: 'can-attach',
+  message: ''
+}));
+script.addEventListener('cannot-attach', () => script.dataset.enabled === 'true' && chrome.runtime.sendMessage({
+  method: 'cannot-attach',
+  message: 'audio source is cross-origin and equalization is not possible'
+}));
+script.remove();
+
+chrome.storage.local.get({
   levels: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
   volume: 1,
   pan: 1,
   mono: false,
   enabled: false
-};
-
-const script = document.createElement('script');
-script.addEventListener('error', e => chrome.runtime.sendMessage({
-  method: 'cannot-attach',
-  message: e.detail.message
-}));
-script.addEventListener('connected', () => chrome.runtime.sendMessage({
-  method: 'connected'
-}));
-script.addEventListener('disconnected', () => chrome.runtime.sendMessage({
-  method: 'disconnected'
-}));
-
-Object.assign(script.dataset, {
-  value: JSON.stringify(prefs.levels),
-  volume: prefs.volume,
-  pan: prefs.pan,
-  mono: prefs.mono
-});
-script.textContent = `{
-  const script = document.currentScript;
-  const bands = [60, 170, 310, 600, 1000, 3000, 6000, 12000, 14000, 16000];
-
-  const adjust = (target = adjust.audio) => {
-    if (!target) {
-      return;
-    }
-    adjust.audio = target;
-
-    const enabled = script.dataset.enabled === 'true';
-    if (enabled === false && target.attached && target.state === 'connected') {
-      const {filters, source, context} = target;
-      source.disconnect(filters.preamp);
-      source.connect(context.destination);
-      target.state = 'disconnected';
-      script.dispatchEvent(new Event(target.state));
-      return;
-    }
-    if (enabled && target.attached && target.state === 'disconnected') {
-      const {filters, source, context} = target;
-      source.disconnect(context.destination);
-      source.connect(filters.preamp);
-      target.state = 'connected';
-      script.dispatchEvent(new Event(target.state));
-    }
-
-    if (target.attached !== true) {
-      try {
-        const context = new window.AudioContext();
-        const source = context.createMediaElementSource(target);
-        const filters = target.filters = {};
-        filters.preamp = context.createGain();
-        source.connect(filters.preamp);
-        filters.balance = context.createStereoPanner();
-        filters.preamp.connect(filters.balance);
-        bands.forEach((band, i) => {
-          const filter = context.createBiquadFilter();
-          filter.frequency.value = band;
-          filter.type = {
-            '0': 'lowshelf', // The first filter, includes all lower frequencies
-            [bands.length - 1]: 'highshelf'
-          }[i] || 'peaking';
-          filters[band] = filter;
-          if (i === 0) {
-            filters.balance.connect(filter);
-          }
-          else {
-            filters[bands[i - 1]].connect(filter);
-          }
-        });
-        filters['16000'].connect(context.destination);
-        target.state = 'connected';
-        script.dispatchEvent(new Event(target.state));
-        Object.assign(target, {
-          attached: true,
-          source,
-          context
-        });
-      }
-      catch (e) {
-        console.warn('cannot attach', e);
-        script.dispatchEvent(new CustomEvent('error', {
-          detail: {
-            message: e.message
-          }
-        }));
-      }
-    }
-    {
-      const {filters, context: {destination}} = target;
-      const {preamp, balance} = filters;
-      destination.channelCount = script.dataset.mono === 'true' ? 1 : destination.maxChannelCount;
-      balance.pan.value = Number(script.dataset.pan);
-      preamp.gain.value = Number(script.dataset.volume);
-      JSON.parse(script.dataset.value).forEach((value, i) => {
-        filters[bands[i]].gain.value = value;
-      });
-    }
-  };
-
-  //
-  script.addEventListener('adjust', () => adjust());
-  // method 1
-  window.addEventListener('playing', ({target}) => adjust(target), true);
-  // method 2
-  const play = Audio.prototype.play;
-  Audio.prototype.play = function() {
-    try {
-      adjust(this);
-    }
-    catch (e) {
-      console.warn(e);
-    }
-    return play.apply(this, arguments);
-  };
-}
-`;
-document.documentElement.appendChild(script);
-script.remove();
-
-const update = (dispatch = true) => {
-  script.dataset.value = JSON.stringify(prefs.levels);
-  script.dataset.volume = prefs.volume;
+}, prefs => {
+  bands.forEach((band, i) => script.dataset[band] = prefs.levels[i]);
   script.dataset.pan = prefs.pan;
+  script.dataset.preamp = prefs.volume;
   script.dataset.mono = prefs.mono;
   script.dataset.enabled = prefs.enabled;
-  if (dispatch) {
-    script.dispatchEvent(new Event('adjust'));
-  }
-};
-
-chrome.storage.local.get(prefs, ps => {
-  Object.assign(prefs, ps);
-  update(false);
 });
 chrome.storage.onChanged.addListener(ps => {
-  if (ps.enabled) {
-    prefs.enabled = ps.enabled.newValue;
-  }
-  if (ps.mono) {
-    prefs.mono = ps.mono.newValue;
-  }
-  if (ps.volume) {
-    prefs.volume = ps.volume.newValue;
+  if (ps.levels) {
+    bands.forEach((band, i) => script.dataset[band] = ps.levels.newValue[i]);
+    script.dispatchEvent(new Event('levels-changed'));
   }
   if (ps.pan) {
-    prefs.pan = ps.pan.newValue;
+    script.dataset.pan = ps.pan.newValue;
+    script.dispatchEvent(new Event('pan-changed'));
   }
-  if (ps.levels) {
-    prefs.levels = ps.levels.newValue;
+  if (ps.volume) {
+    script.dataset.preamp = ps.volume.newValue;
+    script.dispatchEvent(new Event('preamp-changed'));
   }
-  if (ps.enabled || ps.levels || ps.volume || ps.pan || ps.mono) {
-    update();
+  if (ps.mono) {
+    script.dataset.mono = ps.mono.newValue;
+    script.dispatchEvent(new Event('mono-changed'));
+  }
+  if (ps.enabled) {
+    script.dataset.enabled = ps.enabled.newValue;
+    script.dispatchEvent(new Event('enabled-changed'));
   }
 });

@@ -1,4 +1,3 @@
-/* globals utils */
 'use strict';
 
 const prefs = {
@@ -9,9 +8,6 @@ const prefs = {
 chrome.storage.local.get(prefs, ps => {
   Object.assign(prefs, ps);
 
-  if (prefs.enabled) {
-    webNavigation.install();
-  }
   if (prefs.persist === false && prefs.enabled) {
     const onStartup = () => {
       prefs.enabled = false;
@@ -26,14 +22,13 @@ chrome.storage.local.get(prefs, ps => {
 
 chrome.runtime.onMessage.addListener((request, sender) => {
   const tabId = sender.tab.id;
-  if (request.method === 'cannot-attach') {
-    chrome.browserAction.disable(sender.tab.id);
+  if (request.method === 'cannot-attach' || request.method === 'can-attach') {
     chrome.browserAction.setBadgeText({
-      text: 'D',
+      text: request.method === 'cannot-attach' ? 'D' : '',
       tabId
     });
     chrome.browserAction.setTitle({
-      title: request.message || 'Unknown Error',
+      title: request.message,
       tabId
     });
   }
@@ -65,58 +60,43 @@ chrome.runtime.onMessage.addListener((request, sender) => {
   }
 });
 
-const webNavigation = {
-  observe(d) {
-    if (utils.filter(d)) {
-      const {frameId, tabId} = d;
-      chrome.tabs.executeScript(tabId, {
-        file: 'data/inject.js',
-        runAt: 'document_start',
-        matchAboutBlank: true,
-        frameId
-      }, () => chrome.runtime.lastError);
-    }
-  },
-  install() {
-    chrome.webNavigation.onCommitted.removeListener(webNavigation.observe);
-    chrome.webNavigation.onCommitted.addListener(webNavigation.observe);
-  },
-  remove() {
-    chrome.webNavigation.onCommitted.removeListener(webNavigation.observe);
-  }
-};
-
-chrome.storage.onChanged.addListener(ps => {
-  if (ps.enabled) {
-    webNavigation[ps.enabled.newValue ? 'install' : 'remove']();
-  }
-});
+{
+  const c = () => chrome.contextMenus.create({
+    title: 'Open Test Page',
+    id: 'open-test',
+    contexts: ['browser_action']
+  });
+  chrome.runtime.onStartup.addListener(c);
+  chrome.runtime.onInstalled.addListener(c);
+}
+chrome.contextMenus.onClicked.addListener(() => chrome.tabs.create({
+  url: 'https://webbrowsertools.com/audio-test/'
+}));
 
 /* FAQs & Feedback */
 {
-  const {onInstalled, setUninstallURL, getManifest} = chrome.runtime;
-  const {name, version} = getManifest();
-  const page = getManifest().homepage_url;
+  const {management, runtime: {onInstalled, setUninstallURL, getManifest}, storage, tabs} = chrome;
   if (navigator.webdriver !== true) {
+    const page = getManifest().homepage_url;
+    const {name, version} = getManifest();
     onInstalled.addListener(({reason, previousVersion}) => {
-      chrome.storage.local.get({
+      management.getSelf(({installType}) => installType === 'normal' && storage.local.get({
         'faqs': true,
         'last-update': 0
       }, prefs => {
         if (reason === 'install' || (prefs.faqs && reason === 'update')) {
           const doUpdate = (Date.now() - prefs['last-update']) / 1000 / 60 / 60 / 24 > 45;
           if (doUpdate && previousVersion !== version) {
-            chrome.tabs.create({
-              url: page + '&version=' + version +
-                (previousVersion ? '&p=' + previousVersion : '') +
-                '&type=' + reason,
-              active: reason === 'install'
-            });
-            chrome.storage.local.set({'last-update': Date.now()});
+            tabs.query({active: true, currentWindow: true}, tbs => tabs.create({
+              url: page + '?version=' + version + (previousVersion ? '&p=' + previousVersion : '') + '&type=' + reason,
+              active: reason === 'install',
+              index: tbs ? tbs[0].index + 1 : undefined
+            }));
+            storage.local.set({'last-update': Date.now()});
           }
         }
-      });
+      }));
     });
-    setUninstallURL(page + '&rd=feedback&name=' + encodeURIComponent(name) + '&version=' + version);
+    setUninstallURL(page + '?rd=feedback&name=' + encodeURIComponent(name) + '&version=' + version);
   }
 }
