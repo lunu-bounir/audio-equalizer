@@ -19,6 +19,7 @@ script.textContent = `{
     filters.preamp.gain.value = isNaN(script.dataset.preamp) ? 1 : Number(script.dataset.preamp);
     source.connect(filters.preamp);
     filters.balance.pan.value = isNaN(script.dataset.pan) ? 1 : Number(script.dataset.pan);
+    console.log(111, filters.balance.pan.value);
     filters.preamp.connect(filters.balance);
     bands.forEach((band, i) => {
       const filter = context.createBiquadFilter();
@@ -90,9 +91,12 @@ script.textContent = `{
   }
 
   const convert = target => {
-    if (target.src && target.crossOrigin !== 'anonymous' && target.src.startsWith(origin) === false) {
+    if (
+      target.src && target.crossOrigin !== 'anonymous' &&
+      target.src.startsWith('http') && target.src.startsWith(origin) === false
+    ) {
       target.crossOrigin = 'anonymous';
-      console.log('cannot equalize; skipped due to cors');
+      console.log('cannot equalize; skipped due to cors', target.src);
       script.dispatchEvent(new Event('cannot-attach'));
     }
     else {
@@ -152,7 +156,7 @@ script.remove();
 chrome.storage.local.get({
   levels: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
   volume: 1,
-  pan: 1,
+  pan: 0,
   mono: false,
   enabled: false
 }, prefs => {

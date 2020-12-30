@@ -88,15 +88,15 @@ chrome.contextMenus.onClicked.addListener(() => chrome.tabs.create({
           const doUpdate = (Date.now() - prefs['last-update']) / 1000 / 60 / 60 / 24 > 45;
           if (doUpdate && previousVersion !== version) {
             tabs.query({active: true, currentWindow: true}, tbs => tabs.create({
-              url: page + '?version=' + version + (previousVersion ? '&p=' + previousVersion : '') + '&type=' + reason,
+              url: page + '&version=' + version + (previousVersion ? '&p=' + previousVersion : '') + '&type=' + reason,
               active: reason === 'install',
-              index: tbs ? tbs[0].index + 1 : undefined
+              ...(tbs && tbs.length && {index: tbs[0].index + 1})
             }));
             storage.local.set({'last-update': Date.now()});
           }
         }
       }));
     });
-    setUninstallURL(page + '?rd=feedback&name=' + encodeURIComponent(name) + '&version=' + version);
+    setUninstallURL(page + '&rd=feedback&name=' + encodeURIComponent(name) + '&version=' + version);
   }
 }
