@@ -19,7 +19,6 @@ script.textContent = `{
     filters.preamp.gain.value = isNaN(script.dataset.preamp) ? 1 : Number(script.dataset.preamp);
     source.connect(filters.preamp);
     filters.balance.pan.value = isNaN(script.dataset.pan) ? 1 : Number(script.dataset.pan);
-    console.log(111, filters.balance.pan.value);
     filters.preamp.connect(filters.balance);
     bands.forEach((band, i) => {
       const filter = context.createBiquadFilter();
@@ -80,7 +79,6 @@ script.textContent = `{
       script.dispatchEvent(new Event('connected'));
     }
   };
-
   AudioNode.prototype.connect = function(node) {
     if (node instanceof AudioDestinationNode) {
       return attach(this);
@@ -96,7 +94,7 @@ script.textContent = `{
       target.src.startsWith('http') && target.src.startsWith(origin) === false
     ) {
       target.crossOrigin = 'anonymous';
-      console.log('cannot equalize; skipped due to cors', target.src);
+      console.warn('cannot equalize; skipped due to cors', target.src);
       script.dispatchEvent(new Event('cannot-attach'));
     }
     else {
@@ -106,14 +104,26 @@ script.textContent = `{
   }
 
   window.addEventListener('playing', e => convert(e.target), true);
+  {
+    const {play} = Audio.prototype;
+    Audio.prototype.play = function() {
+      if (this.isConnected === false) {
+        convert(this);
+      }
+      return play.apply(this, arguments);
+    };
+  }
+  { // in case the element is not attached
+    const {play} = HTMLMediaElement.prototype;
+    HTMLMediaElement.prototype.play = function() {
+      if (this.isConnected === false) {
+        convert(this);
+      }
+      return play.apply(this, arguments);
+    };
+  }
 
-  const {play} = Audio.prototype;
-  Audio.prototype.play = function() {
-    if (this.isConnected === false) {
-      convert(this);
-    }
-    return play.apply(this, arguments);
-  };
+
 
   script.addEventListener('levels-changed', () => map.forEach(filters => {
     bands.forEach((band, i) => {
