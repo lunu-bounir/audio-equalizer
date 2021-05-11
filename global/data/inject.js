@@ -123,8 +123,6 @@ script.textContent = `{
     };
   }
 
-
-
   script.addEventListener('levels-changed', () => map.forEach(filters => {
     bands.forEach((band, i) => {
       filters[band].gain.value = Number(script.dataset[band]);

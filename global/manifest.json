@@ -1,6 +1,6 @@
 {
   "manifest_version": 2,
-  "version": "0.1.3",
+  "version": "0.1.4",
   "name": "Audio Equalizer and Amplifier",
   "description": "__MSG_description__",
   "default_locale": "en",
