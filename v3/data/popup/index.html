@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <link rel="stylesheet" href="index.css">
+  <meta charset="utf-8">
+</head>
+<body>
+  <header>
+    <label><input type="checkbox" id="enabled">Enable Equalizer</label>
+    <label><input type="checkbox" id="persist" title="If checked, enabling state is persistent after restart">Persistent</label>
+    <label>
+      Presets
+      <select id="presets"></select>
+    </label>
+  </header>
+  <div id="body">
+    <div id="controls">
+      <div class="range" id="volume"></div>
+      <div data-id="dbs">
+        <span>+20 dB</span>
+        <span>0 dB</span>
+        <span>-20 dB</span>
+      </div>
+      <div style="display: contents" id="levels">
+        <div class="range"></div>
+        <div class="range"></div>
+        <div class="range"></div>
+        <div class="range"></div>
+        <div class="range"></div>
+        <div class="range"></div>
+        <div class="range"></div>
+        <div class="range"></div>
+        <div class="range"></div>
+        <div class="range"></div>
+      </div>
+      <span data-id="dbs-label">Preamp</span>
+      <span>60</span>
+      <span>170</span>
+      <span>310</span>
+      <span>600</span>
+      <span>1K</span>
+      <span>3K</span>
+      <span>6K</span>
+      <span>12K</span>
+      <span>14K</span>
+      <span>16K</span>
+    </div>
+  </div>
+  <div id="volume-tools">
+    <input type="button" value="Reset Preamp" id="reset" title="Reset Preamp and Pan">
+    <label><input type="checkbox" id="mono" title="If checked, sterio audio is played as mono">Mono</label>
+    <div id="pan-container">
+      (L)<div class="range" id="pan" type="horizontal" style="--width: 64px"></div>(R)
+    </div>
+  </div>
+  <footer>
+    <label>
+      Profile
+      <select id="profiles"></select>
+    </label>
+    <input type="button" value="Store as Profile" id="add">
+    <input type="button" value="Delete Profile" id="remove" disabled="true">
+  </footer>
+  <script src="libs/range/range.js"></script>
+  <script src="libs/notify/notify.js"></script>
+  <script src="index.js"></script>
+</body>
+</html>
