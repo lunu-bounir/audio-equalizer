@@ -128,7 +128,7 @@ port.remove();
 
   HTMLMediaElement.prototype.play = new Proxy(HTMLMediaElement.prototype.play, {
     apply(target, self, args) {
-      if (this.isConnected === false) {
+      if (self.isConnected === false) {
         try {
           convert(self);
         }

@@ -89,6 +89,9 @@ script.textContent = `{
   }
 
   const convert = target => {
+    console.log(target, window);
+    console.log(new Error().stack);
+
     if (
       target.src && target.crossOrigin !== 'anonymous' &&
       target.src.startsWith('http') && target.src.startsWith(origin) === false
