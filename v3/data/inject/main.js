@@ -1,3 +1,12 @@
+// https://www.energyfm.ru/
+// https://www.w3schools.com/html/tryit.asp?filename=tryhtml5_audio_all
+
+// https://soundcloud.com/
+// https://youtube.com/
+// https://open.spotify.com/
+// https://www.deezer.com/us/album/273425942
+// https://hitfm.ru/
+
 const port = document.getElementById('iea-port');
 port.remove();
 
@@ -48,14 +57,33 @@ port.remove();
   };
 
   const source = target => new Promise((resolve, reject) => {
-    const context = new window.AudioContext();
-    setTimeout(() => {
+    const context = new AudioContext();
+
+    const next = () => {
       try {
         const source = context.createMediaElementSource(target);
         resolve(source);
       }
       catch (e) {
         reject(e);
+      }
+    };
+
+    setTimeout(() => {
+      try {
+        target.setAttribute('crossOrigin', 'anonymous');
+        // make sure we do not have CORS issue
+        target.captureStream();
+        // get the source
+        next();
+      }
+      catch (e) {
+        if (e?.message?.includes('cross-origin')) {
+          reject(e);
+        }
+        else {
+          next();
+        }
       }
     });
   });
@@ -87,7 +115,7 @@ port.remove();
           return attach(self);
         }
         catch (e) {
-          console.error(e);
+          console.warn('cannot equalize;', e.message);
           port.dispatchEvent(new Event('cannot-attach'));
         }
       }
@@ -97,34 +125,42 @@ port.remove();
   });
 
   const convert = target => {
-    if (
-      target.src && target.crossOrigin !== 'anonymous' &&
-      target.src.startsWith('http') && target.src.startsWith(origin) === false
-    ) {
-      console.warn('cannot equalize; skipped due to cors', target.src);
-      port.dispatchEvent(new Event('cannot-attach'));
+    if (port.dataset.enabled === 'false') {
+      convert.caches.add(target);
     }
     else {
       source(target).then(attach).then(() => {
         port.dispatchEvent(new Event('can-attach'));
-      }).catch(() => {});
+      }).catch(e => {
+        if (e?.message?.includes('cross-origin')) {
+          port.dispatchEvent(new Event('cannot-attach'));
+        }
+      });
     }
   };
+  convert.caches = new Set();
 
   window.addEventListener('playing', e => convert(e.target), true);
 
-  Audio.prototype.play = new Proxy(Audio.prototype.play, {
-    apply(target, self, args) {
+  self.Audio = new Proxy(self.Audio, {
+    construct(target, args, newTarget) {
+      const r = Reflect.construct(target, args, newTarget);
       try {
-        convert(self);
+        convert(r);
       }
       catch (e) {
         console.error(e);
       }
-
-      return Reflect.apply(target, self, args);
+      return r;
     }
   });
+
+  // self.MediaSource = new Proxy(self.MediaSource, {
+  //   construct(target, args, newTarget) {
+  //     const r = Reflect.construct(target, args, newTarget);
+  //     return r;
+  //   }
+  // });
 
   HTMLMediaElement.prototype.play = new Proxy(HTMLMediaElement.prototype.play, {
     apply(target, self, args) {
@@ -162,6 +198,13 @@ port.remove();
     }
     else {
       reattach();
+
+      if (convert.caches.size) {
+        for (const target of convert.caches) {
+          convert(target);
+        }
+        convert.caches.clear();
+      }
     }
   });
 }

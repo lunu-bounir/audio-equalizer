@@ -55,6 +55,16 @@ chrome.runtime.onMessage.addListener((request, sender, response) => {
       tabId
     });
   }
+  else if (request.method === 'disabled') {
+    chrome.action.setBadgeText({
+      text: '×',
+      tabId
+    });
+    chrome.action.setTitle({
+      title: 'Equalizer is disabled for this hostname',
+      tabId
+    });
+  }
   else if (request.method === 'connected') {
     chrome.action.setIcon({
       tabId,

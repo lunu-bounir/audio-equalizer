@@ -22,12 +22,12 @@ port.addEventListener('cannot-attach', () => port.dataset.enabled === 'true' && 
 
 let name = '';
 chrome.storage.local.get({
-  levels: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  volume: 1,
-  pan: 0,
-  mono: false,
-  enabled: false,
-  profile: 'Default'
+  'levels': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+  'volume': 1,
+  'pan': 0,
+  'mono': false,
+  'enabled': false,
+  'profile': 'Default'
 }, prefs => {
   port.dataset.profile = prefs.profile;
   bands.forEach((band, i) => port.dataset[band] = prefs.levels[i]);
@@ -35,6 +35,7 @@ chrome.storage.local.get({
   port.dataset.preamp = prefs.volume;
   port.dataset.mono = prefs.mono;
   port.dataset.enabled = prefs.enabled;
+  port.dataset.exceptions = JSON.stringify(prefs['exception-list']);
 });
 chrome.storage.onChanged.addListener(ps => {
   if (ps.levels && name === '') {
@@ -107,12 +108,24 @@ self.start = () => chrome.runtime.sendMessage({
         name = n;
 
         if (port.dataset.profile !== n) {
+          if (n.includes('.disabled')) {
+            port.dataset.enabled = false;
+            chrome.runtime.sendMessage({
+              method: 'disabled'
+            });
+
+            return;
+          }
+
           chrome.storage.local.get({
             ['levels.' + n]: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
             ['volume.' + n]: 1,
             ['pan.' + n]: 0,
-            ['mono.' + n]: false
+            ['mono.' + n]: false,
+            'enabled': false
           }, prefs => {
+            port.dataset.enabled = prefs.enabled;
+
             bands.forEach((band, i) => port.dataset[band] = prefs['levels.' + name][i]);
             port.dataset.pan = prefs['pan.' + name];
             port.dataset.mono = prefs['mono.' + name];
