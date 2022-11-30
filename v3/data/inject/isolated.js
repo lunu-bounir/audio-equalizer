@@ -82,13 +82,20 @@ self.start = () => chrome.runtime.sendMessage({
       profiles: ['Default'],
       profile: 'Default'
     }, prefs => {
-      const {hostname} = new URL(href);
+      const {hostname, pathname} = new URL(href);
 
       const n = ['@ ', ...prefs.profiles].filter(p => p.includes('@')).sort((a, b) => {
-        const ha = a.split('@')[1];
-        const hb = b.split('@')[1];
+        const [ha, pa] = (a.split('@')[1] || '').split('/');
+        const [hb, pb] = (b.split('@')[1] || '').split('/');
 
         if (ha === hostname && hb === hostname) {
+          if (pb && pathname.startsWith('/' + pb)) {
+            return 1;
+          }
+          if (pa && pathname.startsWith('/' + pa)) {
+            return -1;
+          }
+
           return 0;
         }
         if (ha === hostname) {

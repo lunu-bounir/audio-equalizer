@@ -269,13 +269,20 @@ chrome.tabs.query({
     Object.assign(prefs, ps);
 
     if (tab.url && tab.url.startsWith('http')) {
-      const {hostname} = new URL(tab.url);
+      const {hostname, pathname} = new URL(tab.url);
 
       const name = ['@ ', ...prefs.profiles].filter(p => p.includes('@')).sort((a, b) => {
-        const ha = a.split('@')[1];
-        const hb = b.split('@')[1];
+        const [ha, pa] = (a.split('@')[1] || '').split('/');
+        const [hb, pb] = (b.split('@')[1] || '').split('/');
 
         if (ha === hostname && hb === hostname) {
+          if (pb && pathname.startsWith('/' + pb)) {
+            return 1;
+          }
+          if (pa && pathname.startsWith('/' + pa)) {
+            return -1;
+          }
+
           return 0;
         }
         if (ha === hostname) {
