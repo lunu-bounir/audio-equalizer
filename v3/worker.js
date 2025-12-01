@@ -20,28 +20,41 @@ const register = async () => {
     ...props
   }]);
 };
-chrome.runtime.onStartup.addListener(register);
-chrome.runtime.onInstalled.addListener(register);
 
-const prefs = {
-  enabled: false,
-  persist: false
-};
+{
+  const once = () => {
+    if (once.done) {
+      return;
+    }
+    once.done = true;
 
-chrome.storage.local.get(prefs, ps => {
-  Object.assign(prefs, ps);
+    register();
+  };
+  chrome.runtime.onStartup.addListener(once);
+  chrome.runtime.onInstalled.addListener(once);
+}
 
-  if (prefs.persist === false && prefs.enabled) {
-    const onStartup = () => {
-      prefs.enabled = false;
+{
+  const onStartup = async () => {
+    if (onStartup.done) {
+      return;
+    }
+    onStartup.done = true;
+
+    const prefs = await chrome.storage.local.get({
+      enabled: false,
+      persist: false
+    });
+    if (prefs.persist === false && prefs.enabled) {
       chrome.storage.local.set({
         enabled: false
       });
-    };
-    chrome.runtime.onStartup.addListener(onStartup);
-    chrome.runtime.onInstalled.addListener(onStartup);
-  }
-});
+    }
+  };
+
+  chrome.runtime.onStartup.addListener(onStartup);
+  chrome.runtime.onInstalled.addListener(onStartup);
+}
 
 chrome.runtime.onMessage.addListener((request, sender, response) => {
   const tabId = sender.tab.id;
@@ -97,11 +110,17 @@ chrome.runtime.onMessage.addListener((request, sender, response) => {
 });
 
 {
-  const c = () => chrome.contextMenus.create({
-    title: 'Open Test Page',
-    id: 'open-test',
-    contexts: ['action']
-  });
+  const c = () => {
+    if (c.done) {
+      return;
+    }
+    c.done = true;
+    chrome.contextMenus.create({
+      title: 'Open Test Page',
+      id: 'open-test',
+      contexts: ['action']
+    });
+  };
   chrome.runtime.onStartup.addListener(c);
   chrome.runtime.onInstalled.addListener(c);
 }

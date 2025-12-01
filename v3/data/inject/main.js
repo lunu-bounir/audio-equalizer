@@ -7,8 +7,16 @@
 // https://www.deezer.com/us/album/273425942
 // https://hitfm.ru/
 
-const port = document.getElementById('iea-port');
-port.remove();
+let port;
+try {
+  port = document.getElementById('iea-port');
+  port.remove();
+}
+catch (e) {
+  port = document.createElement('span');
+  port.id = 'iea-port';
+  document.documentElement.append(port);
+}
 
 {
   const bands = [60, 170, 310, 600, 1000, 3000, 6000, 12000, 14000, 16000];

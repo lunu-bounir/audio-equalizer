@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "version": "0.2.2",
+  "version": "0.2.3",
   "name": "Audio Equalizer and Amplifier",
   "description": "__MSG_description__",
   "default_locale": "en",
@@ -13,9 +13,10 @@
     "*://*/*"
   ],
   "background": {
-    "service_worker": "worker.js"
+    "service_worker": "worker.js",
+    "scripts": ["worker.js"]
   },
-  "homepage_url": "https://add0n.com/audio-equalizer.html",
+  "homepage_url": "https://webextension.org/listing/audio-equalizer.html",
   "icons": {
     "16": "data/icons/16.png",
     "19": "data/icons/19.png",
@@ -30,5 +31,14 @@
   "action": {
     "_execute_action": {},
     "default_popup": "data/popup/index.html"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "{c9019a65-6808-45ca-938f-236e21cb866d}",
+      "strict_min_version": "128.0"
+    },
+    "data_collection_permissions": {
+      "required": ["none"]
+    }
   }
 }
